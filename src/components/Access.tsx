@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
+  AlertCircle,
   Building2,
   Check,
   CheckCheck,
@@ -21,6 +22,7 @@ import {
 import { Brand } from "./ui";
 import type { Product, Segment } from "../lib/demo";
 import { LocalizedTree, translate, useI18n } from "../i18n";
+import { login, AuthApiError } from "../lib/auth-api";
 
 function SegmentChoice({
   segment,
@@ -76,17 +78,68 @@ export function Login({
   useEffect(() => () => clearTimeout(timer.current), []);
   const demoClient = segment === "personas" ? "344988355" : "880214001";
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     setError("");
-    if (client.trim() !== demoClient || password !== "Mifos#26") {
-      setError(
-        "Los datos no coinciden con el acceso de prueba. Usa el botón de datos demo.",
-      );
+    if (!client.trim() || !password.trim()) {
+      setError("Ingresa tu número de cliente y contraseña.");
       return;
     }
     setBusy(true);
-    timer.current = setTimeout(() => onLogin(segment), 500);
+    try {
+      await login({ username: client.trim(), password });
+      onLogin(segment);
+    } catch (err) {
+      if (err instanceof AuthApiError) {
+        switch (err.code) {
+          case "invalidCredentials":
+            setError("Número de cliente o contraseña incorrectos.");
+            break;
+          case "passwordRenewal":
+            setError("Tu contraseña ha expirado. Contacta a MIFOS para renovarla.");
+            break;
+          case "additional":
+            setError("Se requiere verificación adicional. Contacta a MIFOS.");
+            break;
+          case "denied":
+            setError("Acceso denegado. Verifica tus credenciales.");
+            break;
+          case "timeout":
+            setError("La solicitud tardó demasiado. Intenta de nuevo.");
+            break;
+          case "offline":
+          case "network":
+            setError("Sin conexión. Verifica tu red e inténtalo de nuevo.");
+            break;
+          case "server":
+            setError("Error del servidor. Intenta más tarde.");
+            break;
+          case "malformed":
+            setError("Respuesta inesperada del servidor.");
+            break;
+          case "pending":
+            setError("Autenticación pendiente. Intenta más tarde.");
+            break;
+          case "expired":
+            setError("Sesión expirada. Inicia sesión de nuevo.");
+            break;
+          case "cancelled":
+            setError("La solicitud fue cancelada.");
+            break;
+          case "configuration":
+            setError("Configuración de API incompleta.");
+            break;
+          default:
+            setError("Error de autenticación. Intenta de nuevo.");
+        }
+      } else if (err instanceof DOMException && err.name === "AbortError") {
+        setError("La solicitud fue cancelada.");
+      } else {
+        setError("Error inesperado. Intenta de nuevo.");
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -255,6 +308,7 @@ export function Login({
               </button>
               {error && (
                 <p id="login-error" className="form-error" role="alert">
+                  <AlertCircle size={15} className="inline" aria-hidden="true" />
                   {error}
                 </p>
               )}
@@ -284,11 +338,11 @@ export function Login({
                   setError("");
                 }}
               >
-                Completar con datos demo
+                Usar credenciales de prueba
               </button>
             </form>
             <p className="demo-credentials">
-              Acceso de prueba: {demoClient} / Mifos#26
+              Credenciales de prueba: {demoClient} / Mifos#26
             </p>
             <p className="access-bottom">
               ¿Es tu primera vez?{" "}
