@@ -1,9 +1,14 @@
-import { getLocale, translate, translateWith } from "../i18n";
+import { getLocale, translate } from "../i18n";
 
 export type Segment = "personas" | "empresas";
 export type Product = "cuenta" | "inversion" | "credito";
 export type BankView =
-  "overview" | "transfer" | "activity" | "beneficiaries" | "approvals" | "security";
+  | "overview"
+  | "transfer"
+  | "activity"
+  | "beneficiaries"
+  | "approvals"
+  | "security";
 
 export type Account = {
   id: string;
@@ -17,7 +22,6 @@ export type Transaction = {
   date: string;
   description: string;
   detail: string;
-  counterparty?: string;
   amount: number;
   accountId: string;
 };
@@ -49,8 +53,11 @@ export const shortDate = (date: string) =>
     month: "short",
   }).format(new Date(date));
 
-export const transactionDetail = (transaction: Transaction) =>
-  translateWith(transaction.detail, { name: transaction.counterparty ?? "" });
+export const longDate = (date: Date = new Date()) =>
+  new Intl.DateTimeFormat(getLocale(), {
+    day: "numeric",
+    month: "long",
+  }).format(date);
 
 export function getAccounts(segment: Segment): Account[] {
   return [
@@ -67,12 +74,6 @@ export function getAccounts(segment: Segment): Account[] {
       balance: segment === "empresas" ? 18000000 : 8723050,
     },
   ];
-}
-
-/** Pocket accounts first, in the order they were pinned; the rest keep their order. */
-export function pocketsFirst(accounts: Account[], pockets: string[]): Account[] {
-  const pinned = pockets.flatMap((id) => accounts.filter((account) => account.id === id));
-  return [...pinned, ...accounts.filter((account) => !pockets.includes(account.id))];
 }
 
 export function getTransactions(segment: Segment): Transaction[] {
@@ -132,6 +133,23 @@ export const initialBeneficiaries: Beneficiary[] = [
   { id: "daniel", name: "Daniel García", account: "000000000000004096" },
 ];
 
+export function validateTransferAmount(
+  amountText: string,
+  availableBalance: number,
+): { cents: number } | { error: string } {
+  const cents = Math.round(Number(amountText) * 100);
+  if (!Number.isFinite(cents) || cents < 1 || cents > 5000000) {
+    return { error: "Ingresa un importe entre $0.01 y $50,000.00 MXN." };
+  }
+  if (cents > availableBalance) {
+    return {
+      error:
+        "El saldo de esta cuenta es insuficiente. Elige otra cuenta o un importe menor.",
+    };
+  }
+  return { cents };
+}
+
 export function downloadFile(
   filename: string,
   content: string,
@@ -154,14 +172,14 @@ export function exportTransactions(transactions: Transaction[]) {
   const rows = transactions.map((t) =>
     [
       cell(t.date.slice(0, 10)),
-      cell(translate(t.description)),
+      cell(t.description),
       (t.amount / 100).toFixed(2),
       cell("MXN"),
       cell(translate("DEMOSTRACIÓN")),
     ].join(","),
   );
   downloadFile(
-    translate("mifos-movimientos-demo.csv"),
+    translate("avantthya-movimientos-demo.csv"),
     `\ufeff${translate("Fecha")},${translate("Concepto")},${translate("Importe")},${translate("Moneda")},${translate("Tipo")}\n` +
       rows.join("\n"),
     "text/csv;charset=utf-8",
@@ -170,7 +188,7 @@ export function exportTransactions(transactions: Transaction[]) {
 
 export function transferReceipt(transfer: Transfer) {
   downloadFile(
-    `mifos-demo-${transfer.id}.txt`,
+    `avantthya-demo-${transfer.id}.txt`,
     [
       translate("MIFOS | COMPROBANTE DE DEMOSTRACIÓN"),
       translate("Sin validez bancaria. No se ha movido dinero real."),

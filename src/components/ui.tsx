@@ -2,7 +2,6 @@ import { useEffect, useId, useRef, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowUpRight, X } from "lucide-react";
 import { LocaleToggle, LocalizedTree } from "../i18n";
-import { NetworkStatus } from "./NetworkStatus";
 
 export function Brand({
   light = false,
@@ -98,12 +97,12 @@ export function Modal({
   children,
   title,
   onClose,
-  wide = false,
+  layout = "narrow",
 }: {
   children: ReactNode;
   title: string;
   onClose: () => void;
-  wide?: boolean;
+  layout?: "narrow" | "split";
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -128,7 +127,7 @@ export function Modal({
       <dialog
         ref={dialog}
         aria-labelledby={titleId}
-        className={`app-dialog ${wide ? "app-dialog-wide" : ""}`}
+        className={`app-dialog ${layout === "split" ? "app-dialog-split" : ""}`}
         onCancel={(event) => {
           event.preventDefault();
           closeRef.current();
@@ -159,9 +158,6 @@ export function Modal({
           }
         }}
       >
-        {/* A modal dialog is in the top layer and makes the rest of the page inert, so the indicator
-            of the page cannot be seen or heard while it is open: this one is its own. */}
-        <NetworkStatus inDialog />
         <motion.div
           className="dialog-content"
           initial={{ opacity: 0, y: 16, scale: 0.985 }}

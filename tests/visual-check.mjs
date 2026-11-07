@@ -46,23 +46,27 @@ await page.screenshot({ path: "artifacts/bank.png" });
 const bankAudit = await new AxeBuilder({ page })
   .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
   .analyze();
-const dialog = page.getByRole("dialog");
-await dialog.getByRole("button", { name: "Transferir", exact: true }).click();
+const app = page.locator(".bank-shell");
+await app.getByRole("button", { name: "Transferir", exact: true }).click();
 await audit("transfer");
-await dialog.getByRole("spinbutton", { name: /Importe/ }).fill("100");
-await dialog.getByLabel("Concepto", { exact: true }).fill("Prueba accesible");
-await dialog.getByRole("button", { name: "Revisar transferencia" }).click();
+await app.getByRole("spinbutton", { name: /Importe/ }).fill("100");
+await app.getByLabel("Concepto", { exact: true }).fill("Prueba accesible");
+await app.getByRole("button", { name: "Revisar transferencia" }).click();
 await audit("transfer-review");
-await dialog.getByRole("button", { name: "Continuar a verificación" }).click();
+await app.getByRole("button", { name: "Continuar a verificación" }).click();
 await audit("transfer-verification");
-await dialog
+await app
   .getByRole("button", { name: "Beneficiarios", exact: true })
   .click();
-await dialog
+await app
   .getByRole("button", { name: "Agregar beneficiario", exact: true })
   .click();
 await audit("beneficiaries");
-await page.keyboard.press("Escape");
+await app.getByRole("button", { name: "Seguridad" }).click();
+await audit("security");
+await app.getByRole("tab", { name: "Verificación" }).click();
+await audit("security-authenticator");
+await app.getByRole("button", { name: "Salir" }).click();
 await page.getByRole("button", { name: "Banca en línea", exact: true }).click();
 await audit("login");
 await page.keyboard.press("Escape");
@@ -70,7 +74,10 @@ await page
   .getByRole("button", { name: "Comienza tu futuro", exact: true })
   .click();
 await audit("onboarding");
-await dialog.getByRole("button", { name: "Continuar", exact: true }).click();
+await page
+  .getByRole("dialog")
+  .getByRole("button", { name: "Continuar", exact: true })
+  .click();
 await audit("onboarding-details");
 await page.keyboard.press("Escape");
 await page
@@ -82,7 +89,6 @@ await page.getByRole("button", { name: "Mi inversión", exact: true }).click();
 await audit("investment");
 await page.getByRole("button", { name: "Mi crédito", exact: true }).click();
 await audit("credit");
-await page.keyboard.press("Escape");
 await page.setViewportSize({ width: 390, height: 844 });
 await page.goto(baseURL);
 await page.waitForTimeout(1100);

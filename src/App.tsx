@@ -30,11 +30,7 @@ import {
 } from "lucide-react";
 import { Brand, Eyebrow, Modal, Reveal, TextLink } from "./components/ui";
 import ProductPreview from "./components/ProductPreview";
-import { Contact, Legal, Onboarding } from "./components/Access";
-import { CustomerAccess, CustomerHome } from "./components/CustomerAccess";
-import { NetworkStatus } from "./components/NetworkStatus";
-import type { CustomerSession } from "./lib/authentication/client";
-import { authenticationMessages } from "./lib/authentication/messages";
+import { Contact, Legal, Login, Onboarding } from "./components/Access";
 import type { BankView, Product, Segment } from "./lib/demo";
 import { LocaleToggle, LocalizedTree } from "./i18n";
 
@@ -43,11 +39,12 @@ type ModalType =
   | "login"
   | "onboarding"
   | "contact"
-  | "demo"
   | "privacidad"
   | "terminos"
   | "proteccion"
   | null;
+
+type BankSession = { segment: Segment; view: BankView } | null;
 
 const products = [
   {
@@ -168,7 +165,7 @@ const faqs = [
   {
     question: "¿Qué es MIFOS?",
     answer:
-      "MIFOS es el nombre comercial de Company Name, S.F.P., una Sociedad Financiera Popular mexicana que ofrece soluciones de crédito, ahorro e inversión. Consulta su información institucional y regulatoria vigente en mifos.com.mx.",
+      "MIFOS es el nombre comercial de Company LLC, una Sociedad Financiera Popular mexicana que ofrece soluciones de crédito, ahorro e inversión. Consulta su información institucional y regulatoria vigente en mifos.org.",
   },
   {
     question: "¿Cómo puedo abrir una cuenta?",
@@ -198,12 +195,10 @@ const faqs = [
 ];
 
 export default function App() {
-  const [customerSession, setCustomerSession] = useState<CustomerSession | null>(null);
-  const [sessionNotice, setSessionNotice] = useState("");
   const [segment, setSegment] = useState<Segment>("personas");
   const [product, setProduct] = useState<Product>("cuenta");
   const [modal, setModal] = useState<ModalType>(null);
-  const [demoView, setDemoView] = useState<BankView>("overview");
+  const [session, setSession] = useState<BankSession>(null);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [solutionsMenu, setSolutionsMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -268,8 +263,9 @@ export default function App() {
     setSolutionsMenu(false);
   }
   function openDemo(view: BankView = "overview") {
-    setDemoView(view);
-    openModal("demo");
+    setSession({ segment, view });
+    setMobileMenu(false);
+    setSolutionsMenu(false);
   }
   function chooseProduct(next: Product) {
     setProduct(next);
@@ -286,53 +282,32 @@ export default function App() {
   }
   function authenticated(value: Segment) {
     setSegment(value);
-    setDemoView("overview");
-    setModal("demo");
+    setModal(null);
+    setSession({ segment: value, view: "overview" });
+  }
+
+  function endSession(message: string) {
+    setSession(null);
+    setToast(message);
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLAnchorElement>(".brand-link")
+        ?.focus({ preventScroll: true });
+    });
   }
 
   const content = showcaseContent[product];
 
-  // Real customers never mount the demo dashboard or illustrative landing content.
-  if (customerSession) {
-    return (
-      <>
-        <NetworkStatus />
-        <CustomerHome
-        session={customerSession}
-        onEnd={(expired, revocation, reason) => {
-          setCustomerSession(null);
-          setModal("login");
-          if (reason === "passwordChanged") {
-            // The server ended every session when the password changed: say why, and that the new
-            // password is the one to use. The (failed) logout of the old token adds nothing.
-            setSessionNotice("Tu contraseña cambió. Inicia sesión de nuevo con la nueva contraseña.");
-            return;
-          }
-          if (reason === "inactivity") {
-            setSessionNotice("Tu sesión se cerró por inactividad. Inicia sesión de nuevo para continuar.");
-            return;
-          }
-          setSessionNotice(expired
-            ? authenticationMessages.expired
-            : "Sesión local cerrada. Solicitando cierre al servidor...");
-          void revocation.then((acknowledged) => setSessionNotice(expired
-            ? authenticationMessages.expired
-            : acknowledged
-              ? "Sesión local cerrada. El servidor confirmó el cierre del token de acceso."
-              : "Sesión local cerrada. No pudimos confirmar el cierre en el servidor."));
-        }}
-        />
-      </>
-    );
-  }
-
   return (
     <MotionConfig reducedMotion="user">
-      <NetworkStatus />
       <LocalizedTree>
-        <a href="#contenido" className="skip-link">
-          Saltar al contenido
-        </a>
+        {!session && (
+          <a href="#contenido" className="skip-link">
+            Saltar al contenido
+          </a>
+        )}
+        {!session && (
+          <>
         <header className={`site-header ${scrolled ? "header-scrolled" : ""}`}>
           <div className="header-inner">
             <a
@@ -515,7 +490,7 @@ export default function App() {
             <div className="hero-image-plane">
               <motion.img
                 className="hero-image"
-                src="/images/mifos-city.jpg"
+                src="/images/avantthya-city.jpg"
                 alt="Arquitectura contemporánea de Ciudad de México con un monumental arco rojo, una visión del futuro de MIFOS"
                 fetchPriority="high"
                 width="1568"
@@ -795,7 +770,7 @@ export default function App() {
             <div className="container benefits-grid">
               <Reveal className="benefits-image">
                 <img
-                  src="/images/mifos-everyday.jpg"
+                  src="/images/avantthya-everyday.jpg"
                   alt="Una mujer disfruta de un momento tranquilo en una cafetería mientras consulta su teléfono"
                   loading="lazy"
                   width="1024"
@@ -1184,7 +1159,7 @@ export default function App() {
                 <a href="#nosotros">De nuestro lado</a>
                 <a href="#condiciones">Costos y condiciones</a>
                 <a
-                  href="https://www.mifos.com.mx/"
+                  href="https://www.mifos.org/"
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -1204,7 +1179,7 @@ export default function App() {
                 <a href="tel:+524774614700">477 461 4700</a>
                 <div className="footer-socials">
                   <a
-                    href="https://www.facebook.com/mifosoficial/"
+                    href="https://www.facebook.com/mifos/"
                     target="_blank"
                     rel="noreferrer"
                     aria-label="MIFOS en Facebook"
@@ -1232,7 +1207,7 @@ export default function App() {
             </div>
             <div className="footer-legal">
               <p>
-                MIFOS es el nombre comercial de Company Name, S.A.
+                MIFOS es el nombre comercial de Company, S.A.
                 de C.V., S.F.P. Consulta la información regulatoria y las
                 condiciones vigentes en el sitio oficial. *El Fondo de
                 Protección cubre depósitos elegibles hasta por 25,000 UDIS por
@@ -1277,42 +1252,58 @@ export default function App() {
             </div>
           </div>
         </footer>
+          </>
+        )}
 
-        {modal && (
+        {session ? (
+          <div className="authenticated-root">
+            <Suspense
+              fallback={
+                <div className="bank-loading">
+                  <LoaderCircle size={30} className="spin" />
+                  <p>Preparando tu siguiente paso...</p>
+                </div>
+              }
+            >
+              <DemoBank
+                segment={session.segment}
+                initialView={session.view}
+                onClose={() =>
+                  endSession(
+                    "Sesión demo cerrada. Los datos de prueba se han restablecido.",
+                  )
+                }
+                onTimeout={() =>
+                  endSession(
+                    "Cerramos tu sesión demo después de 10 minutos de inactividad.",
+                  )
+                }
+              />
+            </Suspense>
+          </div>
+        ) : null}
+
+        {modal && !session && (
           <Modal
             key={modal}
             title={
-              modal === "demo"
-                ? "Banca digital de demostración"
-                : modal === "login"
-                  ? "Acceso a la banca"
-                  : modal === "onboarding"
-                    ? "Abre tu experiencia de prueba"
-                    : modal === "contact"
-                      ? "Contacta a MIFOS"
-                      : "Información y condiciones"
+              modal === "login"
+                ? "Acceso a la banca demo"
+                : modal === "onboarding"
+                  ? "Abre tu experiencia de prueba"
+                  : modal === "contact"
+                    ? "Contacta a MIFOS"
+                    : "Información y condiciones"
             }
-            wide={modal === "demo"}
+            layout={modal === "login" ? "split" : "narrow"}
             onClose={() => setModal(null)}
           >
             {modal === "login" ? (
-              <>
-                {sessionNotice && (
-                  <LocalizedTree>
-                    <p role="status" className="form-note">{sessionNotice}</p>
-                  </LocalizedTree>
-                )}
-                <CustomerAccess
-                  onAuthenticated={(session) => {
-                    setModal(null);
-                    setSessionNotice("");
-                    setCustomerSession(session);
-                  }}
-                  initialSegment={segment}
-                  onLogin={authenticated}
-                  onRegister={() => setModal("onboarding")}
-                />
-              </>
+              <Login
+                initialSegment={segment}
+                onLogin={authenticated}
+                onRegister={() => setModal("onboarding")}
+              />
             ) : modal === "onboarding" ? (
               <Onboarding
                 initialSegment={segment}
@@ -1321,32 +1312,6 @@ export default function App() {
               />
             ) : modal === "contact" ? (
               <Contact initialProduct={product} />
-            ) : modal === "demo" ? (
-              <Suspense
-                fallback={
-                  <div className="bank-loading">
-                    <LoaderCircle size={30} className="spin" />
-                    <p>Preparando tu siguiente paso...</p>
-                  </div>
-                }
-              >
-                <DemoBank
-                  segment={segment}
-                  initialView={demoView}
-                  onClose={() => {
-                    setModal(null);
-                    setToast(
-                      "Sesión demo cerrada. Los datos de prueba se han restablecido.",
-                    );
-                  }}
-                  onTimeout={() => {
-                    setModal(null);
-                    setToast(
-                      "Cerramos tu sesión demo después de 10 minutos de inactividad.",
-                    );
-                  }}
-                />
-              </Suspense>
             ) : (
               <Legal topic={modal} />
             )}

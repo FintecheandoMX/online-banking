@@ -1,0 +1,103 @@
+/* Design tokens — single source of truth for the banking experience.
+   All components reference these variables instead of hardcoded values. */
+:root {
+  /* Brand — MIFOS red (product brand in this repo; Mifos preserved via attribution) */
+  --brand: #c72b33;
+  --brand-dark: #a61d27;
+  --brand-strong: #8f1620;
+  --brand-soft: #fdf1ee;
+  --brand-softer: #f9e4e0;
+  --brand-ring: #cc30300c;
+  --brand-border: #e3b8b2;
+
+  /* Neutrals */
+  --ink: #252624;
+  --ink-soft: #464740;
+  --muted: #5f5c52;
+  --muted-soft: #746a5b;
+  --faint: #8a8172;
+  --line: #e8e6e1;
+  --line-soft: #f0ede8;
+  --line-strong: #d9d3c8;
+  --paper: #f7f5f1;
+  --paper-deep: #efe9e0;
+  --surface: #ffffff;
+  --surface-warm: #fffdf9;
+  --sidebar-bg: #f8f7f4;
+
+  /* Semantic */
+  --green: #477461;
+  --green-soft: #edf3e9;
+  --green-ink: #40603c;
+  --amber: #8a6a2f;
+  --amber-soft: #f8f0df;
+  --danger: #ad252d;
+  --danger-soft: #fff2ee;
+  --info-soft: #faf4ec;
+  --info-border: #eee3d5;
+  --info-ink: #6f5a42;
+
+  /* Typography */
+  --font-sans: Manrope, Arial, sans-serif;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 15px;
+  --text-xl: 20px;
+  --text-2xl: 28px;
+  --text-3xl: 38px;
+  --leading-tight: 1.25;
+  --leading-normal: 1.6;
+  --leading-relaxed: 1.9;
+
+  /* Spacing scale (4px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radii */
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px #2b211a0f;
+  --shadow-sm: 0 3px 9px #b5282710;
+  --shadow-md: 0 8px 28px #2b211a14;
+  --shadow-lg: 0 25px 100px #18120f40;
+  --shadow-card: 0 18px 60px #3e30270a, 0 3px 12px #3e302704;
+
+  /* Layout */
+  --container-max: 1248px;
+  --header-max: 1344px;
+  --app-max: 1440px;
+  --content-max: 1120px;
+  --sidebar-width: 264px;
+  --sidebar-rail: 76px;
+  --header-height: 74px;
+  --control-height: 48px;
+  --control-height-sm: 40px;
+  --touch-min: 44px;
+
+  /* Z-index */
+  --z-header: 40;
+  --z-drawer: 60;
+  --z-dialog: 80;
+  --z-toast: 100;
+  --z-skip: 200;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 0.18s;
+  --duration-normal: 0.25s;
+  --duration-slow: 0.7s;
+}

@@ -1,9 +1,9 @@
 @import "tailwindcss";
+@import "./styles/tokens.css";
 @import "./styles/base.css";
 @import "./styles/landing.css";
 @import "./styles/preview.css";
 @import "./styles/access.css";
 @import "./styles/banking.css";
-@import "./styles/transfers.css";
+@import "./styles/bank-shell.css";
 @import "./styles/responsive.css";
-@import "./styles/accessibility.css";

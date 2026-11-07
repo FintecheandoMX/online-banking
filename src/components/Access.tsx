@@ -91,8 +91,31 @@ export function Login({
 
   return (
     <LocalizedTree>
-      <div className="access-content">
-        <Brand compact />
+      <div className="login-split">
+        <aside className="login-brand" aria-label="MIFOS">
+          <Brand light compact />
+          <h2>Tu banca, más cerca.</h2>
+          <p>Una experiencia clara y segura para tus planes.</p>
+          <ul>
+            <li>
+              <Check size={15} />
+              Tus cuentas en una sola vista
+            </li>
+            <li>
+              <Check size={15} />
+              Transferencias en pocos pasos
+            </li>
+            <li>
+              <Check size={15} />
+              Movimientos siempre claros
+            </li>
+          </ul>
+          <p className="login-brand-note">
+            <ShieldCheck size={14} />
+            Entorno de demostración. Sin dinero real.
+          </p>
+        </aside>
+        <div className="access-content login-form">
         {recovery ? (
           <>
             <button
@@ -123,7 +146,7 @@ export function Login({
                 </p>
                 <a
                   className="button button-primary"
-                  href="https://www.mifos.com.mx/"
+                  href="https://www.mifos.org/"
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -278,6 +301,7 @@ export function Login({
         <div className="access-security">
           <LockKeyhole size={13} />
           Prototipo local. Sin conexión a cuentas reales.
+        </div>
         </div>
       </div>
     </LocalizedTree>
@@ -482,7 +506,7 @@ export function Onboarding({
               No se creó una cuenta real ni se enviaron tus datos. Para
               contratar, visita el{" "}
               <a
-                href="https://www.mifos.com.mx/"
+                href="https://www.mifos.org/"
                 target="_blank"
                 rel="noreferrer"
               >
@@ -543,14 +567,14 @@ export function Contact({ initialProduct }: { initialProduct: Product }) {
             <ArrowUpRight size={17} />
           </a>
           <a
-            href="https://www.mifos.com.mx/"
+            href="https://www.mifos.org/"
             target="_blank"
             rel="noreferrer"
           >
             <Globe size={19} />
             <span>
               <small>Canal oficial</small>
-              <strong>mifos.com.mx</strong>
+              <strong>mifos.org</strong>
             </span>
             <ArrowUpRight size={17} />
           </a>
@@ -633,21 +657,21 @@ export function Legal({
       copy: "Esta experiencia demostrativa no usa analítica, cookies de seguimiento ni servicios de envío de formularios. Los datos que ingresas se mantienen únicamente en memoria durante la sesión y se descartan al cerrar la experiencia. No ingreses datos personales, credenciales bancarias ni información financiera reales.",
       second:
         "Los enlaces externos te llevan a canales de terceros, cuyas políticas de privacidad son independientes. Para conocer el aviso de privacidad aplicable a los productos reales, consulta el sitio oficial de MIFOS.",
-      url: "https://www.mifos.com.mx/aviso-privacidad/",
+      url: "https://www.mifos.org/aviso-privacidad/",
     },
     terminos: {
       title: "Claridad, desde el inicio.",
       copy: "Este sitio es un prototipo de interfaz inspirado en los flujos de Mifos Online Banking. No es un canal bancario operativo, no autentica clientes reales, no abre cuentas, no procesa créditos ni mueve dinero. Todos los saldos, movimientos, perfiles, códigos de verificación e historias de uso son ilustrativos.",
       second:
         "Las simulaciones no constituyen una oferta, cotización, recomendación financiera ni promesa de rendimientos. Las condiciones oficiales, comisiones, tasas, GAT y CAT deben verificarse directamente con MIFOS antes de contratar.",
-      url: "https://www.mifos.com.mx/terminos-condiciones/",
+      url: "https://www.mifos.org/terminos-condiciones/",
     },
     proteccion: {
       title: "Conoce tu respaldo.",
-      copy: "MIFOS es el nombre comercial de Company Name, S.F.P., una Sociedad Financiera Popular. El Fondo de Protección cubre depósitos elegibles hasta por 25,000 UDIS por persona y por institución, conforme a la legislación y condiciones aplicables.",
+      copy: "MIFOS es el nombre comercial de Company LLC, una Sociedad Financiera Popular. El Fondo de Protección cubre depósitos elegibles hasta por 25,000 UDIS por persona y por institución, conforme a la legislación y condiciones aplicables.",
       second:
         "La protección no aplica a los saldos ficticios de esta demo. Consulta la situación regulatoria, los alcances, exclusiones y condiciones vigentes en los canales oficiales de MIFOS, la CNBV y la CONDUSEF.",
-      url: "https://www.mifos.com.mx/fondo-de-proteccion/",
+      url: "https://www.mifos.org/fondo-de-proteccion/",
     },
   }[topic];
   return (
