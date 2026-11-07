@@ -61,6 +61,7 @@ import {
   type Transaction,
   type Transfer,
 } from "../lib/demo";
+import { fetchClientInfo, type ClientInfo } from "../lib/auth-api";
 
 type TransferDraft = Omit<Transfer, "id" | "date" | "status">;
 
@@ -687,11 +688,13 @@ function BeneficiariesPanel({
 export default function DemoBank({
   segment,
   initialView,
+  clientInfo,
   onClose,
   onTimeout,
 }: {
   segment: Segment;
   initialView: BankView;
+  clientInfo?: ClientInfo;
   onClose: () => void;
   onTimeout: () => void;
 }) {
@@ -870,12 +873,17 @@ export default function DemoBank({
     });
   }
 
-  const userName = segment === "empresas" ? "Estudio Norte" : "Mariana López";
-  const userInitials = segment === "empresas" ? "EN" : "ML";
+  const userName = clientInfo?.displayName ?? (segment === "empresas" ? "Estudio Norte" : "Mariana López");
+  const userFirstName = clientInfo?.firstname ?? (segment === "empresas" ? "Estudio Norte" : "Mariana");
+  const userInitials = clientInfo
+    ? `${clientInfo.firstname.charAt(0)}${clientInfo.lastname?.charAt(0) ?? ""}`.toUpperCase()
+    : segment === "empresas"
+    ? "EN"
+    : "ML";
   const pageMeta: Record<BankView, { eyebrow: string; title: string }> = {
     overview: {
       eyebrow: "TU SIGUIENTE PASO COMIENZA AQUÍ",
-      title: segment === "empresas" ? "Hola, Estudio Norte." : "Hola, Mariana.",
+      title: `Hola, ${userFirstName}.`,
     },
     transfer: { eyebrow: "TU DINERO, BAJO TU CONTROL", title: "Mueve tus planes." },
     activity: {

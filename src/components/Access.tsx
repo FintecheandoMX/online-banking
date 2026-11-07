@@ -63,7 +63,7 @@ export function Login({
   onRegister,
 }: {
   initialSegment: Segment;
-  onLogin: (segment: Segment) => void;
+  onLogin: (segment: Segment, authToken: string) => void;
   onRegister: () => void;
 }) {
   const [segment, setSegment] = useState(initialSegment);
@@ -87,8 +87,8 @@ export function Login({
     }
     setBusy(true);
     try {
-      await login({ username: client.trim(), password });
-      onLogin(segment);
+      const { token } = await login({ username: client.trim(), password });
+      onLogin(segment, token);
     } catch (err) {
       if (err instanceof AuthApiError) {
         switch (err.code) {

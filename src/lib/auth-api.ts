@@ -23,6 +23,76 @@ export interface LoginResponse {
   isTwoFactorAuthenticationRequired?: boolean;
 }
 
+// Client Information Types
+export interface ClientStatus {
+  id: number;
+  code: string;
+  value: string;
+}
+
+export interface ClientSubStatus {
+  active: boolean;
+  mandatory: boolean;
+}
+
+export interface TimelineDate {
+  year: number;
+  month: number;
+  day: number;
+}
+
+export interface Timeline {
+  submittedOnDate: TimelineDate;
+  submittedByUsername: string;
+  submittedByFirstname: string;
+  submittedByLastname: string;
+  activatedOnDate: TimelineDate;
+  activatedByUsername: string;
+  activatedByFirstname: string;
+  activatedByLastname: string;
+}
+
+export interface LegalForm {
+  id: number;
+  code: string;
+  value: string;
+}
+
+export interface ClientNonPersonDetails {
+  constitution: Record<string, unknown>;
+  mainBusinessLine: Record<string, unknown>;
+}
+
+export interface ClientInfo {
+  id: number;
+  accountNo: string;
+  externalId: string;
+  status: ClientStatus;
+  subStatus: ClientSubStatus;
+  active: boolean;
+  activationDate: TimelineDate;
+  firstname: string;
+  middlename: string;
+  lastname: string;
+  displayName: string;
+  mobileNo: string;
+  emailAddress: string;
+  gender: Record<string, unknown>;
+  clientType: Record<string, unknown>;
+  clientClassification: Record<string, unknown>;
+  isStaff: boolean;
+  officeId: number;
+  officeName: string;
+  timeline: Timeline;
+  legalForm: LegalForm;
+  clientNonPersonDetails: ClientNonPersonDetails;
+}
+
+export interface ClientsResponse {
+  totalFilteredRecords: number;
+  pageItems: ClientInfo[];
+}
+
 export class AuthApiError extends Error {
   constructor(
     public readonly code: AuthenticationFailure,
@@ -46,6 +116,10 @@ function getApiBaseUrl(): string {
 
 function getAuthUrl(): string {
   return `${getApiBaseUrl()}/authentication`;
+}
+
+function getClientsUrl(): string {
+  return `${getApiBaseUrl()}/clients`;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -155,6 +229,27 @@ export async function login(
   const expiresAt = Date.now() + 15 * 60 * 1000;
 
   return { identity, token, expiresAt };
+}
+
+export async function fetchClientInfo(
+  authToken: string,
+  signal?: AbortSignal,
+): Promise<ClientsResponse> {
+  const response = await fetch(getClientsUrl(), {
+    method: "GET",
+    headers: {
+      "Fineract-Platform-TenantId": TENANT_ID,
+      Authorization: `Basic ${authToken}`,
+      Accept: "application/json",
+    },
+    credentials: "omit",
+    cache: "no-store",
+    redirect: "error",
+    referrerPolicy: "no-referrer",
+    signal,
+  });
+
+  return handleResponse<ClientsResponse>(response);
 }
 
 export function getTenantId(): string {

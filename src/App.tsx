@@ -32,6 +32,7 @@ import { Brand, Eyebrow, Modal, Reveal, TextLink } from "./components/ui";
 import ProductPreview from "./components/ProductPreview";
 import { Contact, Legal, Login, Onboarding } from "./components/Access";
 import type { BankView, Product, Segment } from "./lib/demo";
+import { fetchClientInfo, type ClientInfo } from "./lib/auth-api";
 import { LocaleToggle, LocalizedTree } from "./i18n";
 
 const DemoBank = lazy(() => import("./components/Banking"));
@@ -44,7 +45,12 @@ type ModalType =
   | "proteccion"
   | null;
 
-type BankSession = { segment: Segment; view: BankView } | null;
+type BankSession = { 
+  segment: Segment; 
+  view: BankView; 
+  authToken: string;
+  clientInfo?: ClientInfo;
+} | null;
 
 const products = [
   {
@@ -257,13 +263,37 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // Fetch client info when session starts
+  useEffect(() => {
+    if (!session || session.clientInfo) return;
+    
+    let cancelled = false;
+    
+    fetchClientInfo(session.authToken)
+      .then((response) => {
+        if (!cancelled && response.pageItems.length > 0) {
+          setSession((prev) => 
+            prev ? { ...prev, clientInfo: response.pageItems[0] } : null
+          );
+        }
+      })
+      .catch((error) => {
+        // Silently fail - fallback to demo data will be used
+        console.warn("Failed to fetch client info:", error);
+      });
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
   function openModal(next: ModalType) {
     setModal(next);
     setMobileMenu(false);
     setSolutionsMenu(false);
   }
   function openDemo(view: BankView = "overview") {
-    setSession({ segment, view });
+    setSession({ segment, view, authToken: "", clientInfo: undefined });
     setMobileMenu(false);
     setSolutionsMenu(false);
   }
@@ -280,10 +310,10 @@ export default function App() {
     setMobileMenu(false);
     setSolutionsMenu(false);
   }
-  function authenticated(value: Segment) {
+  function authenticated(value: Segment, authToken: string) {
     setSegment(value);
     setModal(null);
-    setSession({ segment: value, view: "overview" });
+    setSession({ segment: value, view: "overview", authToken, clientInfo: undefined });
   }
 
   function endSession(message: string) {
@@ -1268,6 +1298,7 @@ export default function App() {
               <DemoBank
                 segment={session.segment}
                 initialView={session.view}
+                clientInfo={session.clientInfo}
                 onClose={() =>
                   endSession(
                     "Sesión demo cerrada. Los datos de prueba se han restablecido.",
