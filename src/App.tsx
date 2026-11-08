@@ -32,7 +32,14 @@ import { Brand, Eyebrow, Modal, Reveal, TextLink } from "./components/ui";
 import ProductPreview from "./components/ProductPreview";
 import { Contact, Legal, Login, Onboarding } from "./components/Access";
 import type { BankView, Product, Segment } from "./lib/demo";
-import { fetchClientInfo, type ClientInfo } from "./lib/auth-api";
+import { 
+  fetchClientInfo, 
+  fetchClientAccounts, 
+  fetchSavingsAccountBalance,
+  type ClientInfo,
+  type DisplayAccount,
+  type SavingsAccount 
+} from "./lib/auth-api";
 import { LocaleToggle, LocalizedTree } from "./i18n";
 
 const DemoBank = lazy(() => import("./components/Banking"));
@@ -47,9 +54,10 @@ type ModalType =
 
 type BankSession = { 
   segment: Segment; 
-  view: BankView; 
+  view: BankView;
   authToken: string;
   clientInfo?: ClientInfo;
+  accounts?: DisplayAccount[];
 } | null;
 
 const products = [
@@ -286,6 +294,149 @@ export default function App() {
       cancelled = true;
     };
   }, [session]);
+
+  // Fetch accounts when client info is available
+  useEffect(() => {
+    if (!session?.authToken || !session?.clientInfo || session.accounts) return;
+    
+    let cancelled = false;
+    
+    const fetchAccounts = async () => {
+      try {
+        const accountsData = await fetchClientAccounts(
+          session.clientInfo!.id,
+          session.authToken!
+        );
+
+        // Process and combine loan and savings accounts
+        const displayAccounts: DisplayAccount[] = [];
+
+        // Process active loan accounts
+        const activeLoans = accountsData.loanAccounts.filter(
+          (loan) => loan.status.active
+        );
+        
+        activeLoans.forEach((loan) => {
+          displayAccounts.push({
+            id: `loan-${loan.id}`,
+            name: loan.productName,
+            number: loan.accountNo.slice(-4),
+            balance: Math.round((loan.loanBalance || 0) * 100), // Convert to centavos
+            type: "loan",
+            status: loan.status.value,
+            currency: loan.currency,
+            rawAccount: loan,
+          });
+        });
+
+        // Process savings accounts
+        const activeSavings = accountsData.savingsAccounts.filter(
+          (savings) => 
+            savings.status.active || 
+            savings.status.submittedAndPendingApproval
+        );
+
+        for (const savings of activeSavings) {
+          // Try to fetch actual balance, fallback to demo data
+          let balance = 0;
+          try {
+            const balanceData = await fetchSavingsAccountBalance(
+              savings.id,
+              session.authToken!
+            );
+            balance = balanceData.accountBalance || 0;
+          } catch {
+            // Use demo balance as fallback
+            balance = savings.id === 56 ? 8723050 : 0;
+          }
+
+          const savingsName = mapSavingsProductName(savings.productName);
+          
+          displayAccounts.push({
+            id: `savings-${savings.id}`,
+            name: savingsName,
+            number: savings.accountNo.slice(-4),
+            balance,
+            type: "savings",
+            status: savings.status.value,
+            currency: savings.currency,
+            rawAccount: savings,
+          });
+        }
+
+        // If no real accounts, use demo data
+        if (displayAccounts.length === 0) {
+          const demoAccounts = getDemoAccounts(session.segment);
+          displayAccounts.push(...demoAccounts);
+        }
+
+        if (!cancelled) {
+          setSession((prev) => 
+            prev ? { ...prev, accounts: displayAccounts } : null
+          );
+        }
+      } catch (error) {
+        // Continue with demo data if API fails
+        console.warn("Failed to fetch accounts:", error);
+        if (!cancelled) {
+          const demoAccounts = getDemoAccounts(session.segment);
+          setSession((prev) => 
+            prev ? { ...prev, accounts: demoAccounts } : null
+          );
+        }
+      }
+    };
+
+    fetchAccounts();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.authToken, session?.clientInfo]);
+
+  // Helper function to map product names to friendly names
+  function mapSavingsProductName(productName: string): string {
+    const mapping: Record<string, string> = {
+      WALLET: "Mi ahorro",
+      CUENTA: "Cuenta MIFOS",
+    };
+    return mapping[productName.toUpperCase()] || productName;
+  }
+
+  // Helper function to get demo accounts
+  function getDemoAccounts(segment: Segment): DisplayAccount[] {
+    const mxnCurrency = { 
+      code: "MXN", 
+      name: "Mexican Peso", 
+      decimalPlaces: 2, 
+      displaySymbol: "$", 
+      nameCode: "currency.MXN", 
+      displayLabel: "Mexican Peso ($)" 
+    };
+    
+    return [
+      {
+        id: "daily",
+        name: segment === "empresas" ? "Cuenta empresarial" : "Cuenta MIFOS",
+        number: "1024",
+        balance: segment === "empresas" ? 53280000 : 12845000,
+        type: "savings" as const,
+        status: "Active",
+        currency: mxnCurrency,
+        rawAccount: {} as SavingsAccount,
+      },
+      {
+        id: "savings",
+        name: "Mi ahorro",
+        number: "2086",
+        balance: segment === "empresas" ? 18000000 : 8723050,
+        type: "savings" as const,
+        status: "Active",
+        currency: mxnCurrency,
+        rawAccount: {} as SavingsAccount,
+      },
+    ];
+  }
 
   function openModal(next: ModalType) {
     setModal(next);
@@ -1299,6 +1450,7 @@ export default function App() {
                 segment={session.segment}
                 initialView={session.view}
                 clientInfo={session.clientInfo}
+                accounts={session.accounts}
                 onClose={() =>
                   endSession(
                     "Sesión demo cerrada. Los datos de prueba se han restablecido.",

@@ -93,6 +93,145 @@ export interface ClientsResponse {
   pageItems: ClientInfo[];
 }
 
+// Account Types
+export interface AccountStatus {
+  id: number;
+  code: string;
+  value: string;
+  pendingApproval?: boolean;
+  waitingForDisbursal?: boolean;
+  active: boolean;
+  closedObligationsMet?: boolean;
+  closedWrittenOff?: boolean;
+  closedRescheduled?: boolean;
+  closed?: boolean;
+  overpaid?: boolean;
+  submittedAndPendingApproval?: boolean;
+  approved?: boolean;
+  rejected?: boolean;
+  withdrawnByApplicant?: boolean;
+  prematureClosed?: boolean;
+  transferInProgress?: boolean;
+  transferOnHold?: boolean;
+  matured?: boolean;
+}
+
+export interface Currency {
+  code: string;
+  name: string;
+  decimalPlaces: number;
+  inMultiplesOf?: number;
+  displaySymbol: string;
+  nameCode: string;
+  displayLabel: string;
+}
+
+export interface AccountTimeline {
+  submittedOnDate: number[];
+  submittedByUsername: string;
+  submittedByFirstname: string;
+  submittedByLastname: string;
+  approvedOnDate?: number[];
+  approvedByUsername?: string;
+  approvedByFirstname?: string;
+  approvedByLastname?: string;
+  expectedDisbursementDate?: number[];
+  actualDisbursementDate?: number[];
+  disbursedByUsername?: string;
+  disbursedByFirstname?: string;
+  disbursedByLastname?: string;
+  withdrawnOnDate?: number[];
+  withdrawnByUsername?: string;
+  withdrawnByFirstname?: string;
+  withdrawnByLastname?: string;
+  closedOnDate?: number[];
+  closedByUsername?: string;
+  closedByFirstname?: string;
+  closedByLastname?: string;
+  actualMaturityDate?: number[];
+  expectedMaturityDate?: number[];
+  chargedOffOnDate?: number[];
+  chargedOffByUsername?: string;
+  chargedOffByFirstname?: string;
+  chargedOffByLastname?: string;
+  writeOffByUsername?: string;
+  writeOffByFirstname?: string;
+  writeOffByLastname?: string;
+}
+
+export interface LoanAccount {
+  id: number;
+  accountNo: string;
+  productId: number;
+  productName: string;
+  shortProductName: string;
+  status: AccountStatus;
+  currency: Currency;
+  loanType: {
+    id: number;
+    code: string;
+    value: string;
+  };
+  loanCycle?: number;
+  timeline: AccountTimeline;
+  inArrears: boolean;
+  originalLoan?: number;
+  loanBalance?: number;
+  amountPaid?: number;
+}
+
+export interface SavingsAccount {
+  id: number;
+  accountNo: string;
+  productId: number;
+  productName: string;
+  shortProductName: string;
+  status: AccountStatus;
+  currency: Currency;
+  accountType: {
+    id: number;
+    code: string;
+    value: string;
+  };
+  timeline: AccountTimeline;
+  subStatus: {
+    id: number;
+    code: string;
+    value: string;
+    none?: boolean;
+    inactive?: boolean;
+    dormant?: boolean;
+    escheat?: boolean;
+    block?: boolean;
+    blockCredit?: boolean;
+    blockDebit?: boolean;
+  };
+  depositType?: {
+    id: number;
+    code: string;
+    value: string;
+  };
+}
+
+export interface AccountsResponse {
+  loanAccounts: LoanAccount[];
+  groupLoanIndividualMonitoringAccounts: unknown[];
+  savingsAccounts: SavingsAccount[];
+  guarantorAccounts: unknown[];
+  workingCapitalLoanAccounts: unknown[];
+}
+
+export interface DisplayAccount {
+  id: string;
+  name: string;
+  number: string;
+  balance: number;
+  type: "loan" | "savings";
+  status: string;
+  currency: Currency;
+  rawAccount: LoanAccount | SavingsAccount;
+}
+
 export class AuthApiError extends Error {
   constructor(
     public readonly code: AuthenticationFailure,
@@ -120,6 +259,14 @@ function getAuthUrl(): string {
 
 function getClientsUrl(): string {
   return `${getApiBaseUrl()}/clients`;
+}
+
+function getAccountsUrl(clientId: number): string {
+  return `${getApiBaseUrl()}/clients/${clientId}/accounts`;
+}
+
+function getSavingsBalanceUrl(accountId: number): string {
+  return `${getApiBaseUrl()}/savingsaccounts/${accountId}/transactions`;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -250,6 +397,50 @@ export async function fetchClientInfo(
   });
 
   return handleResponse<ClientsResponse>(response);
+}
+
+export async function fetchClientAccounts(
+  clientId: number,
+  authToken: string,
+  signal?: AbortSignal,
+): Promise<AccountsResponse> {
+  const response = await fetch(getAccountsUrl(clientId), {
+    method: "GET",
+    headers: {
+      "Fineract-Platform-TenantId": TENANT_ID,
+      Authorization: `Basic ${authToken}`,
+      Accept: "application/json",
+    },
+    credentials: "omit",
+    cache: "no-store",
+    redirect: "error",
+    referrerPolicy: "no-referrer",
+    signal,
+  });
+
+  return handleResponse<AccountsResponse>(response);
+}
+
+export async function fetchSavingsAccountBalance(
+  accountId: number,
+  authToken: string,
+  signal?: AbortSignal,
+): Promise<{ accountBalance: number }> {
+  const response = await fetch(getSavingsBalanceUrl(accountId), {
+    method: "GET",
+    headers: {
+      "Fineract-Platform-TenantId": TENANT_ID,
+      Authorization: `Basic ${authToken}`,
+      Accept: "application/json",
+    },
+    credentials: "omit",
+    cache: "no-store",
+    redirect: "error",
+    referrerPolicy: "no-referrer",
+    signal,
+  });
+
+  return handleResponse<{ accountBalance: number }>(response);
 }
 
 export function getTenantId(): string {

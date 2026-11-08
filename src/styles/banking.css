@@ -110,6 +110,29 @@
   color: #786347;
   margin-top: 5px;
 }
+.account-group {
+  margin-top: 1.5rem;
+}
+.account-group:first-of-type {
+  margin-top: 0;
+}
+.account-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+.account-group-title svg {
+  color: var(--color-brand);
+}
+.loan-balance {
+  color: var(--color-loan, #c41e3a);
+}
 .bank-quick-actions {
   display: flex;
   gap: 10px;

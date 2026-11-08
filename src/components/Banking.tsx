@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
+  Briefcase,
   Building2,
   Check,
   CheckCheck,
@@ -61,7 +62,7 @@ import {
   type Transaction,
   type Transfer,
 } from "../lib/demo";
-import { fetchClientInfo, type ClientInfo } from "../lib/auth-api";
+import { type ClientInfo, type DisplayAccount } from "../lib/auth-api";
 
 type TransferDraft = Omit<Transfer, "id" | "date" | "status">;
 
@@ -685,22 +686,50 @@ function BeneficiariesPanel({
   );
 }
 
+// Helper to convert demo Account to DisplayAccount
+function toDisplayAccount(acc: Account): DisplayAccount {
+  return {
+    id: acc.id,
+    name: acc.name,
+    number: acc.number,
+    balance: acc.balance,
+    type: "savings",
+    status: "Active",
+    currency: { 
+      code: "MXN", 
+      name: "Mexican Peso", 
+      decimalPlaces: 2, 
+      displaySymbol: "$", 
+      nameCode: "currency.MXN", 
+      displayLabel: "Mexican Peso ($)" 
+    },
+    rawAccount: {} as any,
+  };
+}
+
 export default function DemoBank({
   segment,
   initialView,
   clientInfo,
+  accounts: initialAccounts,
   onClose,
   onTimeout,
 }: {
   segment: Segment;
   initialView: BankView;
   clientInfo?: ClientInfo;
+  accounts?: DisplayAccount[];
   onClose: () => void;
   onTimeout: () => void;
 }) {
   const { locale } = useI18n();
   const [view, setView] = useState<BankView>(initialView);
-  const [accounts, setAccounts] = useState(() => getAccounts(segment));
+  const [accounts, setAccounts] = useState<DisplayAccount[]>(() => {
+    if (initialAccounts && initialAccounts.length > 0) {
+      return initialAccounts;
+    }
+    return getAccounts(segment).map(toDisplayAccount);
+  });
   const [transactions, setTransactions] = useState(() =>
     getTransactions(segment),
   );
@@ -742,35 +771,39 @@ export default function DemoBank({
   }, []);
 
   const total = accounts.reduce((sum, account) => sum + account.balance, 0);
-  const pending = approvals.filter(
-    (transfer) => transfer.status === "pending",
-  ).length;
-  const activity = useMemo(
-    () =>
-      transactions.filter((transaction) => {
-        const matchesAccount =
-          selectedAccount === "all" ||
-          transaction.accountId === selectedAccount;
-        const matchesType =
-          filter === "all" ||
-          (filter === "in" ? transaction.amount > 0 : transaction.amount < 0);
-        const normalize = (value: string) =>
-          value
-            .normalize("NFD")
-            .replace(/[̀-ͯ]/g, "")
-            .toLowerCase();
-        return (
-          matchesAccount &&
-          matchesType &&
-          normalize(transaction.description + transaction.detail).includes(
-            normalize(search),
-          )
-        );
-      }),
-    [transactions, selectedAccount, filter, search],
-  );
+    const pending = approvals.filter(
+      (transfer) => transfer.status === "pending",
+    ).length;
+    const activity = useMemo(
+      () =>
+        transactions.filter((transaction) => {
+          const matchesAccount =
+            selectedAccount === "all" ||
+            transaction.accountId === selectedAccount;
+          const matchesType =
+            filter === "all" ||
+            (filter === "in" ? transaction.amount > 0 : transaction.amount < 0);
+          const normalize = (value: string) =>
+            value
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .toLowerCase();
+          return (
+            matchesAccount &&
+            matchesType &&
+            normalize(transaction.description + transaction.detail).includes(
+              normalize(search),
+            )
+          );
+        }),
+      [transactions, selectedAccount, filter, search],
+    );
 
-  function execute(transfer: Transfer): boolean {
+    // Group accounts by type for overview display
+      const savingsAccounts = accounts.filter((acc) => acc.type === "savings");
+      const loanAccounts = accounts.filter((acc) => acc.type === "loan");
+
+      function execute(transfer: Transfer): boolean {
     if (
       (accounts.find((account) => account.id === transfer.from)?.balance ?? 0) <
       transfer.amount
@@ -1070,40 +1103,83 @@ export default function DemoBank({
                           </strong>
                           <p>Más claridad para lo que viene.</p>
                         </div>
-                        <div className="account-grid">
-                          {accounts.map((account, index) => (
-                            <button
-                              key={account.id}
-                              className={`account-choice ${selectedAccount === account.id ? "selected" : ""}`}
-                              aria-pressed={selectedAccount === account.id}
-                              onClick={() =>
-                                setSelectedAccount(
-                                  selectedAccount === account.id
-                                    ? "all"
-                                    : account.id,
-                                )
-                              }
-                            >
-                              <span className="account-choice-top">
-                                <span>
-                                  {index === 0 ? (
-                                    <Wallet size={18} />
-                                  ) : (
-                                    <Landmark size={18} />
-                                  )}
-                                  {account.name}
-                                </span>
-                                <ChevronRight size={16} />
-                              </span>
-                              <strong>
-                                {hidden ? "••••••" : money(account.balance)}
-                              </strong>
-                              <small>
-                                Cuenta de prueba · {account.number}
-                              </small>
-                            </button>
-                          ))}
-                        </div>
+                        
+                        {/* Savings Accounts Group */}
+                        {savingsAccounts.length > 0 && (
+                          <div className="account-group">
+                            <h3 className="account-group-title">
+                              <Wallet size={16} />
+                              Cuentas de Ahorro
+                            </h3>
+                            <div className="account-grid">
+                              {savingsAccounts.map((account) => (
+                                <button
+                                  key={account.id}
+                                  className={`account-choice ${selectedAccount === account.id ? "selected" : ""}`}
+                                  aria-pressed={selectedAccount === account.id}
+                                  onClick={() =>
+                                    setSelectedAccount(
+                                      selectedAccount === account.id ? "all" : account.id,
+                                    )
+                                  }
+                                >
+                                  <span className="account-choice-top">
+                                    <span>
+                                      <Landmark size={18} />
+                                      {account.name}
+                                    </span>
+                                    <ChevronRight size={16} />
+                                  </span>
+                                  <strong>
+                                    {hidden ? "••••••" : money(account.balance)}
+                                  </strong>
+                                  <small>
+                                    Cuenta {account.status === "Active" ? "de prueba" : account.status} · {account.number}
+                                  </small>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Loan Accounts Group */}
+                        {loanAccounts.length > 0 && (
+                          <div className="account-group">
+                            <h3 className="account-group-title">
+                              <Briefcase size={16} />
+                              Créditos
+                            </h3>
+                            <div className="account-grid">
+                              {loanAccounts.map((account) => (
+                                <button
+                                  key={account.id}
+                                  className={`account-choice ${selectedAccount === account.id ? "selected" : ""}`}
+                                  aria-pressed={selectedAccount === account.id}
+                                  onClick={() =>
+                                    setSelectedAccount(
+                                      selectedAccount === account.id ? "all" : account.id,
+                                    )
+                                  }
+                                >
+                                  <span className="account-choice-top">
+                                    <span>
+                                      <Briefcase size={18} />
+                                      {account.name}
+                                    </span>
+                                    <ChevronRight size={16} />
+                                  </span>
+                                  <strong className="loan-balance">
+                                    {hidden ? "••••••" : money(account.balance)}
+                                  </strong>
+                                  <small>
+                                    Saldo pendiente · {account.number}
+                                  </small>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         <div className="bank-quick-actions">
                           <button
                             className="button button-primary"
