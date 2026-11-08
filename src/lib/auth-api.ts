@@ -221,6 +221,52 @@ export interface AccountsResponse {
   workingCapitalLoanAccounts: unknown[];
 }
 
+// Savings Transaction Types
+export interface SavingsTransactionType {
+  id: number;
+  code: string;
+  value: string;
+  deposit: boolean;
+  withdrawal: boolean;
+}
+
+export interface SavingsTransactionPaymentDetailData {
+  id: number;
+  paymentType: { id: number; name: string };
+  accountNumber?: string;
+}
+
+export interface SavingsTransaction {
+  id: number;
+  transactionType: SavingsTransactionType;
+  paymentDetailData?: SavingsTransactionPaymentDetailData;
+  currency: {
+    code: string;
+    decimalPlaces: number;
+    displaySymbol: string;
+  };
+  amount: number;
+  runningBalance: number;
+  reversed: boolean;
+  submittedOnDate: number[];
+  submittedByUsername: string;
+  note?: string;
+  date: number[];
+  entryType: "CREDIT" | "DEBIT";
+}
+
+export interface SavingsAccountWithTransactions {
+  id: number;
+  accountNo: string;
+  status: { id: number; code: string; value: string; active: boolean };
+  currency: { code: string; decimalPlaces: number; displaySymbol: string };
+  summary: {
+    accountBalance: number;
+    availableBalance: number;
+  };
+  transactions: SavingsTransaction[];
+}
+
 export interface DisplayAccount {
   id: string;
   name: string;
@@ -267,6 +313,10 @@ function getAccountsUrl(clientId: number): string {
 
 function getSavingsBalanceUrl(accountId: number): string {
   return `${getApiBaseUrl()}/savingsaccounts/${accountId}`;
+}
+
+function getSavingsTransactionsUrl(accountId: number): string {
+  return `${getApiBaseUrl()}/savingsaccounts/${accountId}?associations=transactions`;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -450,6 +500,28 @@ export async function fetchSavingsAccountBalance(
   const balanceInCentavos = Math.round(balanceInPesos * 100);
 
   return { accountBalance: balanceInCentavos };
+}
+
+export async function fetchSavingsAccountTransactions(
+  accountId: number,
+  authToken: string,
+  signal?: AbortSignal,
+): Promise<SavingsAccountWithTransactions> {
+  const response = await fetch(getSavingsTransactionsUrl(accountId), {
+    method: "GET",
+    headers: {
+      "Fineract-Platform-TenantId": TENANT_ID,
+      Authorization: `Basic ${authToken}`,
+      Accept: "application/json",
+    },
+    credentials: "omit",
+    cache: "no-store",
+    redirect: "error",
+    referrerPolicy: "no-referrer",
+    signal,
+  });
+
+  return handleResponse<SavingsAccountWithTransactions>(response);
 }
 
 export function getTenantId(): string {

@@ -168,7 +168,7 @@ export function downloadFile(
 export function exportTransactions(transactions: Transaction[]) {
   // Treat user-entered concepts as text, never spreadsheet formulas.
   const cell = (value: string) =>
-    `"${(/^[=+@-]/.test(value) ? "'" : "") + value.replace(/"/g, '""')}"`;
+    `\"${(/^[=+@-]/.test(value) ? "'" : "") + value.replace(/\"/g, '""')}\"`;
   const rows = transactions.map((t) =>
     [
       cell(t.date.slice(0, 10)),
@@ -184,6 +184,38 @@ export function exportTransactions(transactions: Transaction[]) {
       rows.join("\n"),
     "text/csv;charset=utf-8",
   );
+}
+
+import type { SavingsTransaction } from "./auth-api";
+
+export function mapMifosTransactionToDisplay(
+  tx: SavingsTransaction,
+  accountId: string,
+  decimalPlaces: number
+): Transaction {
+  const multiplier = Math.pow(10, decimalPlaces);
+  const amountCentavos = Math.round(tx.amount * multiplier);
+
+  const year = tx.date[0];
+  const month = String(tx.date[1]).padStart(2, "0");
+  const day = String(tx.date[2]).padStart(2, "0");
+  const dateStr = `${year}-${month}-${day}`;
+
+  let description = tx.transactionType.value;
+  if (tx.note) {
+    description = `${tx.transactionType.value} - ${tx.note}`;
+  } else if (tx.paymentDetailData?.paymentType?.name) {
+    description = `${tx.transactionType.value} - ${tx.paymentDetailData.paymentType.name}`;
+  }
+
+  return {
+    id: String(tx.id),
+    date: dateStr,
+    description: description,
+    detail: tx.note ?? "",
+    amount: tx.transactionType.deposit ? amountCentavos : -amountCentavos,
+    accountId: accountId,
+  };
 }
 
 export function transferReceipt(transfer: Transfer) {

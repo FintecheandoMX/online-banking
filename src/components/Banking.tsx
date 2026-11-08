@@ -23,6 +23,7 @@ import {
   Info,
   Landmark,
   ListFilter,
+  LoaderCircle,
   LockKeyhole,
   LogOut,
   Plus,
@@ -51,6 +52,7 @@ import {
   getTransactions,
   initialBeneficiaries,
   longDate,
+  mapMifosTransactionToDisplay,
   money,
   shortDate,
   transferReceipt,
@@ -62,7 +64,11 @@ import {
   type Transaction,
   type Transfer,
 } from "../lib/demo";
-import { type ClientInfo, type DisplayAccount } from "../lib/auth-api";
+import {
+  fetchSavingsAccountTransactions,
+  type ClientInfo,
+  type DisplayAccount,
+} from "../lib/auth-api";
 
 type TransferDraft = Omit<Transfer, "id" | "date" | "status">;
 
@@ -712,6 +718,7 @@ export default function DemoBank({
   initialView,
   clientInfo,
   accounts: initialAccounts,
+  authToken,
   onClose,
   onTimeout,
 }: {
@@ -719,6 +726,7 @@ export default function DemoBank({
   initialView: BankView;
   clientInfo?: ClientInfo;
   accounts?: DisplayAccount[];
+  authToken?: string;
   onClose: () => void;
   onTimeout: () => void;
 }) {
@@ -733,6 +741,7 @@ export default function DemoBank({
   const [transactions, setTransactions] = useState(() =>
     getTransactions(segment),
   );
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
   const [beneficiaries, setBeneficiaries] =
     useState<Beneficiary[]>(initialBeneficiaries);
   const [approvals, setApprovals] = useState<Transfer[]>([]);
@@ -776,6 +785,51 @@ export default function DemoBank({
       setAccounts(initialAccounts);
     }
   }, [initialAccounts]);
+
+  // Fetch real transactions when a savings account is selected
+  useEffect(() => {
+    if (selectedAccount !== "all" && authToken && accounts) {
+      const account = accounts.find((acc) => acc.id === selectedAccount);
+
+      if (account && account.type === "savings" && "id" in account.rawAccount) {
+        setIsLoadingTransactions(true);
+        const savingsId = (account.rawAccount as any).id;
+
+        fetchSavingsAccountTransactions(savingsId, authToken)
+          .then((data) => {
+            const mapped = data.transactions
+              .filter((tx) => !tx.reversed)
+              .map((tx) =>
+                mapMifosTransactionToDisplay(
+                  tx,
+                  account.id,
+                  account.currency.decimalPlaces
+                )
+              );
+            setTransactions(mapped);
+          })
+          .catch((err) => {
+            console.error("Error fetching transactions:", err);
+            // Fallback to mock data filtered for this account type
+            const mockTxs = getTransactions(segment).filter(
+              (tx) => tx.accountId === "savings" || tx.accountId === "daily"
+            );
+            setTransactions(mockTxs.map((tx) => ({ ...tx, accountId: selectedAccount })));
+          })
+          .finally(() => {
+            setIsLoadingTransactions(false);
+          });
+      } else {
+        // For loan accounts or unauthenticated, fallback to mock
+        const mockTxs = getTransactions(segment).filter(
+          (tx) => tx.accountId === "savings" || tx.accountId === "daily"
+        );
+        setTransactions(mockTxs.map((tx) => ({ ...tx, accountId: selectedAccount })));
+      }
+    } else if (selectedAccount === "all") {
+      setTransactions(getTransactions(segment));
+    }
+  }, [selectedAccount, authToken, accounts, segment]);
 
   const total = accounts.reduce((sum, account) => sum + account.balance, 0);
     const pending = approvals.filter(
@@ -1250,73 +1304,82 @@ export default function DemoBank({
                   )}
                   {view === "activity" && (
                     <SectionCard className="activity-card">
-                      <div className="activity-toolbar">
-                        <label className="search-input">
-                          <Search size={17} />
-                          <span className="sr-only">Buscar movimientos</span>
-                          <input
-                            type="search"
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            placeholder="Buscar un movimiento"
-                          />
-                        </label>
-                        <label className="sr-only" htmlFor="activity-filter">
-                          Tipo de movimiento
-                        </label>
-                        <select
-                          id="activity-filter"
-                          value={filter}
-                          onChange={(event) => setFilter(event.target.value)}
-                        >
-                          <option value="all">Todos los movimientos</option>
-                          <option value="in">Ingresos</option>
-                          <option value="out">Egresos</option>
-                        </select>
-                        <button
-                          className="button button-outline button-small"
-                          onClick={() => exportTransactions(activity)}
-                          disabled={!activity.length}
-                        >
-                          <Download size={15} />
-                          CSV
-                        </button>
-                      </div>
-                      <div
-                        className="account-filter"
-                        role="group"
-                        aria-label="Filtrar por cuenta"
-                      >
-                        <button
-                          className={selectedAccount === "all" ? "active" : ""}
-                          aria-pressed={selectedAccount === "all"}
-                          onClick={() => setSelectedAccount("all")}
-                        >
-                          Todas las cuentas
-                        </button>
-                        {accounts.map((account) => (
-                          <button
-                            key={account.id}
-                            className={
-                              selectedAccount === account.id ? "active" : ""
-                            }
-                            aria-pressed={selectedAccount === account.id}
-                            onClick={() => setSelectedAccount(account.id)}
+                      {isLoadingTransactions ? (
+                        <div className="flex items-center justify-center p-8 text-text-secondary">
+                          <LoaderCircle className="spin mr-2" size={20} />
+                          Cargando movimientos...
+                        </div>
+                      ) : (
+                        <>
+                          <div className="activity-toolbar">
+                            <label className="search-input">
+                              <Search size={17} />
+                              <span className="sr-only">Buscar movimientos</span>
+                              <input
+                                type="search"
+                                value={search}
+                                onChange={(event) => setSearch(event.target.value)}
+                                placeholder="Buscar un movimiento"
+                              />
+                            </label>
+                            <label className="sr-only" htmlFor="activity-filter">
+                              Tipo de movimiento
+                            </label>
+                            <select
+                              id="activity-filter"
+                              value={filter}
+                              onChange={(event) => setFilter(event.target.value)}
+                            >
+                              <option value="all">Todos los movimientos</option>
+                              <option value="in">Ingresos</option>
+                              <option value="out">Egresos</option>
+                            </select>
+                            <button
+                              className="button button-outline button-small"
+                              onClick={() => exportTransactions(activity)}
+                              disabled={!activity.length}
+                            >
+                              <Download size={15} />
+                              CSV
+                            </button>
+                          </div>
+                          <div
+                            className="account-filter"
+                            role="group"
+                            aria-label="Filtrar por cuenta"
                           >
-                            {account.name}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="results-count" role="status">
-                        {activity.length}{" "}
-                        {translate(
-                          activity.length === 1
-                            ? "movimiento de demostración"
-                            : "movimientos de demostración",
-                          locale,
-                        )}
-                      </p>
-                      <TransactionList transactions={activity} />
+                            <button
+                              className={selectedAccount === "all" ? "active" : ""}
+                              aria-pressed={selectedAccount === "all"}
+                              onClick={() => setSelectedAccount("all")}
+                            >
+                              Todas las cuentas
+                            </button>
+                            {accounts.map((account) => (
+                              <button
+                                key={account.id}
+                                className={
+                                  selectedAccount === account.id ? "active" : ""
+                                }
+                                aria-pressed={selectedAccount === account.id}
+                                onClick={() => setSelectedAccount(account.id)}
+                              >
+                                {account.name}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="results-count" role="status">
+                            {activity.length}{" "}
+                            {translate(
+                              activity.length === 1
+                                ? "movimiento de demostración"
+                                : "movimientos de demostración",
+                              locale,
+                            )}
+                          </p>
+                          <TransactionList transactions={activity} />
+                        </>
+                      )}
                     </SectionCard>
                   )}
                   {view === "beneficiaries" && (

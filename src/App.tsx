@@ -1451,6 +1451,7 @@ export default function App() {
                 initialView={session.view}
                 clientInfo={session.clientInfo}
                 accounts={session.accounts}
+                authToken={session.authToken}
                 onClose={() =>
                   endSession(
                     "Sesión demo cerrada. Los datos de prueba se han restablecido.",
@@ -1488,12 +1489,12 @@ export default function App() {
                 onRegister={() => setModal("onboarding")}
               />
             ) : modal === "onboarding" ? (
-              <Onboarding
-                initialSegment={segment}
-                initialProduct={product}
-                onComplete={authenticated}
-              />
-            ) : modal === "contact" ? (
+                         <Onboarding
+                           initialSegment={segment}
+                           initialProduct={product}
+                           onComplete={(segment) => authenticated(segment, "")}
+                         />
+                       ) : modal === "contact" ? (
               <Contact initialProduct={product} />
             ) : (
               <Legal topic={modal} />
