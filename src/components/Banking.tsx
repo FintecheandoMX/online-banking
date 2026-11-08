@@ -770,6 +770,13 @@ export default function DemoBank({
     };
   }, []);
 
+  // Sync accounts state when initialAccounts prop changes (e.g., after API fetch)
+  useEffect(() => {
+    if (initialAccounts && initialAccounts.length > 0) {
+      setAccounts(initialAccounts);
+    }
+  }, [initialAccounts]);
+
   const total = accounts.reduce((sum, account) => sum + account.balance, 0);
     const pending = approvals.filter(
       (transfer) => transfer.status === "pending",

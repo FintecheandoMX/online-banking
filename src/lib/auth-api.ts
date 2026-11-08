@@ -266,7 +266,7 @@ function getAccountsUrl(clientId: number): string {
 }
 
 function getSavingsBalanceUrl(accountId: number): string {
-  return `${getApiBaseUrl()}/savingsaccounts/${accountId}/transactions`;
+  return `${getApiBaseUrl()}/savingsaccounts/${accountId}`;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -440,7 +440,16 @@ export async function fetchSavingsAccountBalance(
     signal,
   });
 
-  return handleResponse<{ accountBalance: number }>(response);
+  const data = await handleResponse<{
+    summary?: { accountBalance?: number };
+  }>(response);
+
+  // The balance is in the summary.accountBalance field, in main currency units (pesos)
+  // Convert to centavos for the demo system (money() divides by 100)
+  const balanceInPesos = data.summary?.accountBalance ?? 0;
+  const balanceInCentavos = Math.round(balanceInPesos * 100);
+
+  return { accountBalance: balanceInCentavos };
 }
 
 export function getTenantId(): string {
