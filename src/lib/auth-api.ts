@@ -267,6 +267,48 @@ export interface SavingsAccountWithTransactions {
   transactions: SavingsTransaction[];
 }
 
+// Loan Transaction Types
+export interface LoanTransactionType {
+  id: number;
+  code: string;
+  value: string;
+  disbursement: boolean;
+  repayment: boolean;
+  chargeoff: boolean;
+}
+
+export interface LoanTransactionPaymentDetailData {
+  id: number;
+  paymentType: { id: number; name: string };
+}
+
+export interface LoanTransactionTransfer {
+  transferDescription: string;
+}
+
+export interface LoanTransaction {
+  id: number;
+  type: LoanTransactionType;
+  paymentDetailData?: LoanTransactionPaymentDetailData;
+  transfer?: LoanTransactionTransfer;
+  currency: {
+    code: string;
+    decimalPlaces: number;
+    displaySymbol: string;
+  };
+  amount: number;
+  outstandingLoanBalance: number;
+  manuallyReversed: boolean;
+  date: number[];
+}
+
+export interface LoanAccountWithTransactions {
+  id: number;
+  accountNo: string;
+  currency: { code: string; decimalPlaces: number; displaySymbol: string };
+  transactions: LoanTransaction[];
+}
+
 export interface DisplayAccount {
   id: string;
   name: string;
@@ -317,6 +359,10 @@ function getSavingsBalanceUrl(accountId: number): string {
 
 function getSavingsTransactionsUrl(accountId: number): string {
   return `${getApiBaseUrl()}/savingsaccounts/${accountId}?associations=transactions`;
+}
+
+function getLoanTransactionsUrl(loanId: number): string {
+  return `${getApiBaseUrl()}/loans/${loanId}?associations=transactions`;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -522,6 +568,28 @@ export async function fetchSavingsAccountTransactions(
   });
 
   return handleResponse<SavingsAccountWithTransactions>(response);
+}
+
+export async function fetchLoanAccountTransactions(
+  loanId: number,
+  authToken: string,
+  signal?: AbortSignal,
+): Promise<LoanAccountWithTransactions> {
+  const response = await fetch(getLoanTransactionsUrl(loanId), {
+    method: "GET",
+    headers: {
+      "Fineract-Platform-TenantId": TENANT_ID,
+      Authorization: `Basic ${authToken}`,
+      Accept: "application/json",
+    },
+    credentials: "omit",
+    cache: "no-store",
+    redirect: "error",
+    referrerPolicy: "no-referrer",
+    signal,
+  });
+
+  return handleResponse<LoanAccountWithTransactions>(response);
 }
 
 export function getTenantId(): string {

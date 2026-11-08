@@ -53,6 +53,7 @@ import {
   initialBeneficiaries,
   longDate,
   mapMifosTransactionToDisplay,
+  mapMifosLoanTransactionToDisplay,
   money,
   shortDate,
   transferReceipt,
@@ -66,6 +67,7 @@ import {
 } from "../lib/demo";
 import {
   fetchSavingsAccountTransactions,
+  fetchLoanAccountTransactions,
   type ClientInfo,
   type DisplayAccount,
 } from "../lib/auth-api";
@@ -786,7 +788,7 @@ export default function DemoBank({
     }
   }, [initialAccounts]);
 
-  // Fetch real transactions when a savings account is selected
+  // Fetch real transactions when a savings or loan account is selected
   useEffect(() => {
     if (selectedAccount !== "all" && authToken && accounts) {
       const account = accounts.find((acc) => acc.id === selectedAccount);
@@ -819,8 +821,36 @@ export default function DemoBank({
           .finally(() => {
             setIsLoadingTransactions(false);
           });
+      } else if (account && account.type === "loan" && "id" in account.rawAccount) {
+        setIsLoadingTransactions(true);
+        const loanId = (account.rawAccount as any).id;
+
+        fetchLoanAccountTransactions(loanId, authToken)
+          .then((data) => {
+            const mapped = data.transactions
+              .filter((tx) => !tx.manuallyReversed)
+              .map((tx) =>
+                mapMifosLoanTransactionToDisplay(
+                  tx,
+                  account.id,
+                  account.currency.decimalPlaces
+                )
+              );
+            setTransactions(mapped);
+          })
+          .catch((err) => {
+            console.error("Error fetching loan transactions:", err);
+            // Fallback to mock data filtered for this account type
+            const mockTxs = getTransactions(segment).filter(
+              (tx) => tx.accountId === "savings" || tx.accountId === "daily"
+            );
+            setTransactions(mockTxs.map((tx) => ({ ...tx, accountId: selectedAccount })));
+          })
+          .finally(() => {
+            setIsLoadingTransactions(false);
+          });
       } else {
-        // For loan accounts or unauthenticated, fallback to mock
+        // For unsupported accounts or unauthenticated, fallback to mock
         const mockTxs = getTransactions(segment).filter(
           (tx) => tx.accountId === "savings" || tx.accountId === "daily"
         );

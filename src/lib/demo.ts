@@ -186,7 +186,7 @@ export function exportTransactions(transactions: Transaction[]) {
   );
 }
 
-import type { SavingsTransaction } from "./auth-api";
+import type { SavingsTransaction, LoanTransaction } from "./auth-api";
 
 export function mapMifosTransactionToDisplay(
   tx: SavingsTransaction,
@@ -214,6 +214,40 @@ export function mapMifosTransactionToDisplay(
     description: description,
     detail: tx.note ?? "",
     amount: tx.transactionType.deposit ? amountCentavos : -amountCentavos,
+    accountId: accountId,
+  };
+}
+
+export function mapMifosLoanTransactionToDisplay(
+  tx: LoanTransaction,
+  accountId: string,
+  decimalPlaces: number
+): Transaction {
+  const multiplier = Math.pow(10, decimalPlaces);
+  const amountCentavos = Math.round(tx.amount * multiplier);
+
+  const year = tx.date[0];
+  const month = String(tx.date[1]).padStart(2, "0");
+  const day = String(tx.date[2]).padStart(2, "0");
+  const dateStr = `${year}-${month}-${day}`;
+
+  let description = tx.type.value;
+  if (tx.transfer?.transferDescription) {
+    description = `${tx.type.value} - ${tx.transfer.transferDescription}`;
+  } else if (tx.paymentDetailData?.paymentType?.name) {
+    description = `${tx.type.value} - ${tx.paymentDetailData.paymentType.name}`;
+  }
+
+  // Determine transaction direction for UI coloring/filtering
+  // Disbursement is money received by client ("in"), Repayment/Charge-off is money paid/adjusted ("out")
+  const txType = tx.type.disbursement ? "in" : "out";
+
+  return {
+    id: String(tx.id),
+    date: dateStr,
+    description: description,
+    detail: "",
+    amount: txType === "in" ? amountCentavos : -amountCentavos,
     accountId: accountId,
   };
 }
