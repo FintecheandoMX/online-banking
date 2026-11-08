@@ -221,10 +221,11 @@ export function mapMifosTransactionToDisplay(
 export function mapMifosLoanTransactionToDisplay(
   tx: LoanTransaction,
   accountId: string,
-  decimalPlaces: number
+  _decimalPlaces: number
 ): Transaction {
-  const multiplier = Math.pow(10, decimalPlaces);
-  const amountCentavos = Math.round(tx.amount * multiplier);
+  // The API returns amounts in base currency units (pesos), not in the smallest unit.
+  // Always convert from pesos to centavos by multiplying by 100.
+  const amountCentavos = Math.round(tx.amount * 100);
 
   const year = tx.date[0];
   const month = String(tx.date[1]).padStart(2, "0");
