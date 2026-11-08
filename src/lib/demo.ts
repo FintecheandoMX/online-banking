@@ -1,4 +1,5 @@
 import { getLocale, translate } from "../i18n";
+import type { DisplayAccount } from "./auth-api";
 
 export type Segment = "personas" | "empresas";
 export type Product = "cuenta" | "inversion" | "credito";
@@ -40,6 +41,19 @@ export type Transfer = {
   status: "pending" | "approved" | "rejected";
 };
 
+// Maps Mifos product names to user-friendly Spanish display names
+export function getSavingsProductDisplayName(productName: string): string {
+  const nameMap: Record<string, string> = {
+    WALLET: "Billetera de Ahorro",
+    CUENTA: "Cuenta de Ahorro",
+    SAVINGS: "Cuenta de Ahorro",
+    NOMINA: "Cuenta de Nómina",
+  };
+  
+  // Return mapped name, or fallback to the original productName formatted nicely
+  return nameMap[productName.toUpperCase()] || productName;
+}
+
 // Monetary values are stored as integer centavos to avoid rounding drift.
 export const money = (centavos: number) =>
   new Intl.NumberFormat(getLocale(), {
@@ -59,19 +73,27 @@ export const longDate = (date: Date = new Date()) =>
     month: "long",
   }).format(date);
 
-export function getAccounts(segment: Segment): Account[] {
+export function getAccounts(segment: Segment): DisplayAccount[] {
   return [
     {
       id: "daily",
       name: segment === "empresas" ? "Cuenta empresarial" : "Cuenta MIFOS",
       number: "1024",
       balance: segment === "empresas" ? 53280000 : 12845000,
+      type: "savings",
+      status: "Active",
+      currency: { code: "MXN", decimalPlaces: 2, displaySymbol: "$", name: "Mexican Peso", nameCode: "currency.MXN", displayLabel: "Mexican Peso ($)" },
+      rawAccount: {} as any,
     },
     {
-      id: "savings",
-      name: "Mi ahorro",
+      id: "savings-demo",
+      name: "Billetera de Ahorro",
       number: "2086",
       balance: segment === "empresas" ? 18000000 : 8723050,
+      type: "savings",
+      status: "Active",
+      currency: { code: "MXN", decimalPlaces: 2, displaySymbol: "$", name: "Mexican Peso", nameCode: "currency.MXN", displayLabel: "Mexican Peso ($)" },
+      rawAccount: {} as any,
     },
   ];
 }

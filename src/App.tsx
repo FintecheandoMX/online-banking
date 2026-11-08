@@ -32,6 +32,7 @@ import { Brand, Eyebrow, Modal, Reveal, TextLink } from "./components/ui";
 import ProductPreview from "./components/ProductPreview";
 import { Contact, Legal, Login, Onboarding } from "./components/Access";
 import type { BankView, Product, Segment } from "./lib/demo";
+import { getSavingsProductDisplayName } from "./lib/demo";
 import { 
   fetchClientInfo, 
   fetchClientAccounts, 
@@ -396,11 +397,7 @@ export default function App() {
 
   // Helper function to map product names to friendly names
   function mapSavingsProductName(productName: string): string {
-    const mapping: Record<string, string> = {
-      WALLET: "Mi ahorro",
-      CUENTA: "Cuenta MIFOS",
-    };
-    return mapping[productName.toUpperCase()] || productName;
+    return getSavingsProductDisplayName(productName);
   }
 
   // Helper function to get demo accounts
@@ -427,7 +424,7 @@ export default function App() {
       },
       {
         id: "savings",
-        name: "Mi ahorro",
+        name: "Billetera de Ahorro",
         number: "2086",
         balance: segment === "empresas" ? 18000000 : 8723050,
         type: "savings" as const,
