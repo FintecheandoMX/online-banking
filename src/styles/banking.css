@@ -873,3 +873,154 @@
     font-size: 10px;
   }
 }
+
+/* Loan Summary Card */
+.loan-summary-card {
+  margin-top: 1.5rem;
+}
+
+.loan-summary {
+  padding: 0.5rem 0;
+}
+
+.loan-summary-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.loan-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1.5rem;
+}
+
+.loan-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.loan-summary-label {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: #786347;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.loan-summary-value {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+.loan-summary-item.next-payment {
+  grid-column: 1 / -1;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e6dfd6;
+}
+
+.next-payment-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.next-payment-date {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.next-payment-badge {
+  font-size: 0.625rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  background: #f5f1eb;
+  color: #a18c72;
+  white-space: nowrap;
+}
+
+.next-payment-badge.overdue {
+  background: #f8e7df;
+  color: #a16b4f;
+}
+
+.loan-summary-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 2rem;
+  color: #7b6140;
+  font-size: 0.875rem;
+}
+
+.loan-summary-loading .spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loan-summary-paid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  color: #58773f;
+}
+
+.loan-summary-paid .paid-icon {
+  color: #58773f;
+}
+
+.loan-summary-paid h3 {
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.loan-summary-paid p {
+  font-size: 0.875rem;
+  margin: 0;
+  color: #7b6140;
+}
+
+@media (min-width: 768px) {
+  .loan-summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .loan-summary-item.next-payment {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1100px) {
+  .loan-summary-title {
+    font-size: 1rem;
+  }
+
+  .loan-summary-value {
+    font-size: 1.25rem;
+  }
+
+  .next-payment-date {
+    font-size: 1.125rem;
+  }
+}

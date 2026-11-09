@@ -302,6 +302,61 @@ export interface LoanTransaction {
   date: number[];
 }
 
+export interface RepaymentSchedulePeriod {
+  period?: number;
+  dueDate: [number, number, number];
+  complete: boolean;
+  totalDueForPeriod: number;
+  totalOutstandingForPeriod: number;
+  totalPaidForPeriod: number;
+  principalDue: number;
+  interestDue: number;
+  principalPaid: number;
+  interestPaid: number;
+}
+
+export interface RepaymentSchedule {
+  periods: RepaymentSchedulePeriod[];
+  totalPrincipalDue: number;
+  totalInterestDue: number;
+  totalFeesDue: number;
+  totalPenaltyChargesDue: number;
+  totalDue: number;
+  totalPrincipalOutstanding: number;
+  totalInterestOutstanding: number;
+  totalFeesOutstanding: number;
+  totalPenaltyChargesOutstanding: number;
+  totalOutstanding: number;
+  totalPrincipalPaid: number;
+  totalInterestPaid: number;
+  totalFeesPaid: number;
+  totalPenaltyChargesPaid: number;
+  totalPaid: number;
+}
+
+export interface LoanDetail {
+  id: number;
+  accountNo: string;
+  productId: number;
+  productName: string;
+  shortProductName: string;
+  status: AccountStatus;
+  currency: Currency;
+  loanType: {
+    id: number;
+    code: string;
+    value: string;
+  };
+  loanCycle?: number;
+  timeline: AccountTimeline;
+  inArrears: boolean;
+  originalLoan?: number;
+  loanBalance?: number;
+  amountPaid?: number;
+  repaymentSchedule?: RepaymentSchedule;
+  transactions?: LoanTransaction[];
+}
+
 export interface LoanAccountWithTransactions {
   id: number;
   accountNo: string;
@@ -363,6 +418,10 @@ function getSavingsTransactionsUrl(accountId: number): string {
 
 function getLoanTransactionsUrl(loanId: number): string {
   return `${getApiBaseUrl()}/loans/${loanId}?associations=transactions`;
+}
+
+function getLoanDetailUrl(loanId: number): string {
+  return `${getApiBaseUrl()}/loans/${loanId}?associations=repaymentSchedule,transactions`;
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -590,6 +649,28 @@ export async function fetchLoanAccountTransactions(
   });
 
   return handleResponse<LoanAccountWithTransactions>(response);
+}
+
+export async function fetchLoanDetail(
+  loanId: number,
+  authToken: string,
+  signal?: AbortSignal,
+): Promise<LoanDetail> {
+  const response = await fetch(getLoanDetailUrl(loanId), {
+    method: "GET",
+    headers: {
+      "Fineract-Platform-TenantId": TENANT_ID,
+      Authorization: `Basic ${authToken}`,
+      Accept: "application/json",
+    },
+    credentials: "omit",
+    cache: "no-store",
+    redirect: "error",
+    referrerPolicy: "no-referrer",
+    signal,
+  });
+
+  return handleResponse<LoanDetail>(response);
 }
 
 export function getTenantId(): string {

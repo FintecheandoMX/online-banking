@@ -68,9 +68,16 @@ import {
 import {
   fetchSavingsAccountTransactions,
   fetchLoanAccountTransactions,
+  fetchLoanDetail,
   type ClientInfo,
   type DisplayAccount,
+  type LoanDetail,
 } from "../lib/auth-api";
+import {
+  getLoanRepaymentSummary,
+  formatCurrency,
+  formatRemainingTerm,
+} from "../lib/loan-helpers";
 
 type TransferDraft = Omit<Transfer, "id" | "date" | "status">;
 
@@ -89,6 +96,92 @@ function TransactionList({
       />
     );
   return <TransactionRows transactions={transactions} hidden={hidden} />;
+}
+
+interface LoanSummaryCardProps {
+  loanDetail: LoanDetail;
+  hidden: boolean;
+  isLoading: boolean;
+}
+
+function LoanSummaryCard({
+  loanDetail,
+  hidden,
+  isLoading,
+}: LoanSummaryCardProps) {
+  const summary = getLoanRepaymentSummary(loanDetail);
+
+  if (isLoading) {
+    return (
+      <div className="loan-summary-loading">
+        <LoaderCircle size={24} className="spin" />
+        <p>Cargando resumen del crédito...</p>
+      </div>
+    );
+  }
+
+  if (summary.isFullyPaid) {
+    return (
+      <div className="loan-summary-paid">
+        <CheckCheck size={32} className="paid-icon" />
+        <h3>Crédito liquidado</h3>
+        <p>Has completado todos los pagos de este crédito.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="loan-summary">
+      <h3 className="loan-summary-title">Resumen de tu crédito</h3>
+      <div className="loan-summary-grid">
+        <div className="loan-summary-item">
+          <span className="loan-summary-label">Saldo pendiente</span>
+          <strong className="loan-summary-value">
+            {hidden ? "••••••" : formatCurrency(loanDetail.loanBalance ?? 0)}
+          </strong>
+        </div>
+        <div className="loan-summary-item">
+          <span className="loan-summary-label">% liquidado</span>
+          <strong className="loan-summary-value">
+            {loanDetail.amountPaid && loanDetail.loanBalance
+              ? `${Math.round((loanDetail.amountPaid / (loanDetail.amountPaid + loanDetail.loanBalance)) * 100)}%`
+              : "0%"}
+          </strong>
+        </div>
+        <div className="loan-summary-item">
+          <span className="loan-summary-label">Mensualidad</span>
+          <strong className="loan-summary-value">
+            {hidden ? "••••••" : formatCurrency(summary.monthlyAmount)}
+          </strong>
+        </div>
+        <div className="loan-summary-item">
+          <span className="loan-summary-label">Plazo restante</span>
+          <strong className="loan-summary-value">
+            {formatRemainingTerm(summary.remainingTerm)}
+          </strong>
+        </div>
+        <div className="loan-summary-item">
+          <span className="loan-summary-label">Has pagado</span>
+          <strong className="loan-summary-value">
+            {hidden ? "••••••" : formatCurrency(loanDetail.amountPaid ?? 0)}
+          </strong>
+        </div>
+        <div className="loan-summary-item next-payment">
+          <span className="loan-summary-label">Próximo pago</span>
+          <div className="next-payment-info">
+            <strong className="next-payment-date">
+              {summary.nextPaymentLabel}
+            </strong>
+            <span
+              className={`next-payment-badge ${summary.isOverdue ? "overdue" : ""}`}
+            >
+              {summary.badgeText}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function TransferPanel({
@@ -749,6 +842,8 @@ export default function DemoBank({
   const [approvals, setApprovals] = useState<Transfer[]>([]);
   const [hidden, setHidden] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState("all");
+  const [loanDetail, setLoanDetail] = useState<LoanDetail | null>(null);
+  const [isLoadingLoanDetail, setIsLoadingLoanDetail] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [approvalId, setApprovalId] = useState<string | null>(null);
@@ -795,6 +890,7 @@ export default function DemoBank({
 
       if (account && account.type === "savings" && "id" in account.rawAccount) {
         setIsLoadingTransactions(true);
+        setLoanDetail(null);
         const savingsId = (account.rawAccount as any).id;
 
         fetchSavingsAccountTransactions(savingsId, authToken)
@@ -822,33 +918,47 @@ export default function DemoBank({
             setIsLoadingTransactions(false);
           });
       } else if (account && account.type === "loan" && "id" in account.rawAccount) {
-        setIsLoadingTransactions(true);
-        const loanId = (account.rawAccount as any).id;
+              setIsLoadingTransactions(true);
+              setIsLoadingLoanDetail(true);
+              const loanId = (account.rawAccount as any).id;
 
-        fetchLoanAccountTransactions(loanId, authToken)
-          .then((data) => {
-            const mapped = data.transactions
-              .filter((tx) => !tx.manuallyReversed)
-              .map((tx) =>
-                mapMifosLoanTransactionToDisplay(
-                  tx,
-                  account.id,
-                  account.currency.decimalPlaces
-                )
-              );
-            setTransactions(mapped);
-          })
-          .catch((err) => {
-            console.error("Error fetching loan transactions:", err);
-            // Fallback to mock data filtered for this account type
-            const mockTxs = getTransactions(segment).filter(
-              (tx) => tx.accountId === "savings" || tx.accountId === "daily"
-            );
-            setTransactions(mockTxs.map((tx) => ({ ...tx, accountId: selectedAccount })));
-          })
-          .finally(() => {
-            setIsLoadingTransactions(false);
-          });
+              // Fetch loan detail with repayment schedule
+              fetchLoanDetail(loanId, authToken)
+                .then((data) => {
+                  setLoanDetail(data);
+                })
+                .catch((err) => {
+                  console.error("Error fetching loan detail:", err);
+                  setLoanDetail(null);
+                })
+                .finally(() => {
+                  setIsLoadingLoanDetail(false);
+                });
+
+              // Fetch loan transactions
+              fetchLoanAccountTransactions(loanId, authToken)
+                .then((data) => {
+                  const mapped = data.transactions
+                    .filter((tx) => !tx.manuallyReversed)
+                    .map((tx) =>
+                      mapMifosLoanTransactionToDisplay(
+                        tx,
+                        account.id,
+                        account.currency.decimalPlaces,
+                      ),
+                    );
+                  setTransactions(mapped);
+                })
+                .catch((err) => {
+                  console.error("Error fetching loan transactions:", err);
+                  const mockTxs = getTransactions(segment).filter(
+                    (tx) => tx.accountId === "savings" || tx.accountId === "daily",
+                  );
+                  setTransactions(mockTxs.map((tx) => ({ ...tx, accountId: selectedAccount })));
+                })
+                .finally(() => {
+                  setIsLoadingTransactions(false);
+                });
       } else {
         // For unsupported accounts or unauthenticated, fallback to mock
         const mockTxs = getTransactions(segment).filter(
@@ -858,6 +968,7 @@ export default function DemoBank({
       }
     } else if (selectedAccount === "all") {
       setTransactions(getTransactions(segment));
+      setLoanDetail(null);
     }
   }, [selectedAccount, authToken, accounts, segment]);
 
@@ -1269,6 +1380,17 @@ export default function DemoBank({
                               ))}
                             </div>
                           </div>
+                        )}
+
+                        {/* Loan Summary Card - shown when a loan account is selected */}
+                        {selectedAccount !== "all" && loanDetail && (
+                          <SectionCard className="loan-summary-card">
+                            <LoanSummaryCard
+                              loanDetail={loanDetail}
+                              hidden={hidden}
+                              isLoading={isLoadingLoanDetail}
+                            />
+                          </SectionCard>
                         )}
 
                         <div className="bank-quick-actions">
